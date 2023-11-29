@@ -1,0 +1,58 @@
+import requests
+import base64
+import pandas as pd
+
+# Define the AXL API URL
+url = "https://hq-cucm-pub.ciscouc.com/axl/"
+
+# Define the path to the Excel file
+excel_file_path = "data.xlsx"
+
+# Read data from the Excel file using pandas
+data = pd.read_excel(excel_file_path)
+
+# Define username and password
+username = "axlapiuser"
+password = "axlapiuser"
+
+# Define request headers, including Basic Authentication
+headers = {
+    'Content-Type': 'text/xml',
+    'Authorization': f'Basic {base64.b64encode(f"{username}:{password}".encode()).decode()}'
+}
+
+def send_remove_line_request(pattern, route_partition_name):
+    # Define the SOAP request payload
+    payload = f"""
+    <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                      xmlns:ns="http://www.cisco.com/AXL/API/12.5">
+       <soapenv:Header/>
+       <soapenv:Body>
+          <ns:removeLine sequence="?">
+             <pattern>{pattern}</pattern>
+             <routePartitionName uuid="?">{route_partition_name}</routePartitionName>
+          </ns:removeLine>
+       </soapenv:Body>
+    </soapenv:Envelope>
+    """
+
+    try:
+        # Send a POST request to the AXL API
+        response = requests.post(url, headers=headers, data=payload, verify=False)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            print(f"Request for pattern '{pattern}' and routePartitionName '{route_partition_name}' was successful. Response:")
+            print(response.text)
+        else:
+            print(f"Request for pattern '{pattern}' and routePartitionName '{route_partition_name}' failed with status code: {response.status_code}")
+            print(response.text)
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred while sending the request: {e}")
+
+if __name__ == "__main__":
+    # Loop through the rows of data and send SOAP requests for each combination
+    for index, row in data.iterrows():
+        pattern = row["pattern"]
+        route_partition_name = row["routePartitionName"]
+        send_remove_line_request(pattern, route_partition_name)
